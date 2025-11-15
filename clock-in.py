@@ -33,8 +33,8 @@ class DaKa(object):
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3770.100 Safari/537.36"
         }
         self.sess = requests.Session()
-
-      def login(self):
+        
+    def login(self):
         """Login to ZJU platform (updated regex, no bs4)"""
         res = self.sess.get(self.login_url, headers=self.headers)
         html = res.text
@@ -46,8 +46,7 @@ class DaKa(object):
         execution = m.group(1)
 
         # 获取 RSA 公钥
-        pub = self.sess.get('https://zjuam.zju.edu.cn/cas/v2/getPubKey',
-                            headers=self.headers).json()
+        pub = self.sess.get('https://zjuam.zju.edu.cn/cas/v2/getPubKey', headers=self.headers).json()
         n, e = pub['modulus'], pub['exponent']
         encrypt_password = self._rsa_encrypt(self.password, e, n)
 
