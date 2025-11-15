@@ -33,24 +33,37 @@ def _rsa_encrypt(password_str, e_str, M_str):
 
 def find_execution_from_html(html):
     """
-    无 BeautifulSoup 提取 execution。
-    使用正则表达式。
+    无依赖版：宽松匹配 execution 字段
+    CAS 的 HTML 经常被压缩、换行或插 JS，这个正则能适配所有情况。
     """
-
-    # 常规 input[name="execution"]
+    # 1. 最通用匹配：input 标签 + name=execution
     m = re.search(
-        r'<input[^>]*name=["\']execution["\'][^>]*value=["\']([^"\']+)["\']',
+        r'<input[^>]*name=[\'"]execution[\'"][^>]*value=[\'"]([^\'"]+)[\'"]',
+        html,
+        flags=re.I | re.S
+    )
+    if m:
+        return m.group(1)
+
+    # 2. 备份：匹配 JSON 里的 execution 字段
+    m = re.search(
+        r'execution[\'"]\s*:\s*[\'"]([^\'"]+)[\'"]',
+        html,
+        flags=re.I | re.S
+    )
+    if m:
+        return m.group(1)
+
+    # 3. 再备份：匹配 execution=xxxx
+    m = re.search(
+        r'execution=([A-Za-z0-9._-]+)',
         html
     )
     if m:
         return m.group(1)
 
-    # 在 JS 中: execution: "xxxx"
-    m = re.search(r'execution["\']\s*:\s*["\']([^"\']+)["\']', html)
-    if m:
-        return m.group(1)
-
     return None
+
 
 def extract_old_info_and_def(html):
     """
