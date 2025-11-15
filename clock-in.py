@@ -33,21 +33,15 @@ class DaKa(object):
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3770.100 Safari/537.36"
         }
         self.sess = requests.Session()
-        
+
     def login(self):
-        """Login to ZJU platform (updated regex, no bs4)"""
+        """Login to ZJU platform"""
         res = self.sess.get(self.login_url, headers=self.headers)
-        html = res.text
-
-        # 安全解析 execution
-        m = re.search(r'name="execution"\s+value="([^"]+)"', html)
-        if not m:
-            raise LoginError("无法解析 execution，登录页面结构已更新")
-        execution = m.group(1)
-
-        # 获取 RSA 公钥
-        pub = self.sess.get('https://zjuam.zju.edu.cn/cas/v2/getPubKey', headers=self.headers).json()
-        n, e = pub['modulus'], pub['exponent']
+        execution = re.search(
+            'name="execution" value="(.*?)"', res.text).group(1)
+        res = self.sess.get(
+            url='https://zjuam.zju.edu.cn/cas/v2/getPubKey', headers=self.headers).json()
+        n, e = res['modulus'], res['exponent']
         encrypt_password = self._rsa_encrypt(self.password, e, n)
 
         data = {
@@ -56,17 +50,12 @@ class DaKa(object):
             'execution': execution,
             '_eventId': 'submit'
         }
+        res = self.sess.post(url=self.login_url, data=data, headers=self.headers)
 
-        # 登录
-        res = self.sess.post(self.login_url, data=data, headers=self.headers)
-
-        # 判断是否登录失败
-        text = res.text
-        if "统一身份认证" in text and "登录" in text:
-            raise LoginError("登录失败：账号或密码错误")
-
+        # check if login successfully
+        if '统一身份认证' in res.content.decode():
+            raise LoginError('登录失败，请核实账号密码重新登录')
         return self.sess
-
 
     def post(self):
         """Post the hitcard info"""
